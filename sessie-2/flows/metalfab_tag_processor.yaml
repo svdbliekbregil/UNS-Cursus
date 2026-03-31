@@ -3,11 +3,11 @@
 # ==============================================================================
 # Plak in: Bridge → Read tab → Code mode AAN
 #
-# De cloud simulator (95.217.14.139:1883) stuurt data in UMH-formaat.
+# De cloud simulator (<cloud-broker>:1883) stuurt data in UMH-formaat.
 # Elk MQTT bericht is al 1 waarde per topic — geen JSON parsing nodig.
 #
 # Bridge General tab:
-#   Connection: 95.217.14.139:1883
+#   Connection: <cloud-broker>:1883
 #   Location: metalfab.eindhoven (of laat leeg, advancedProcessing overschrijft het)
 #
 # Bridge Read tab — MQTT topics:

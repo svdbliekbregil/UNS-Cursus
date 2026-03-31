@@ -4,7 +4,7 @@
 # Bridges Tasmota power monitoring sensors from the home lab into UNS.
 # Parses JSON SENSOR payload → individual _raw UNS messages per metric.
 #
-# Source: 192.168.68.56:1883 (home lab Mosquitto, no auth)
+# Source: <homelab-broker>:1883 (home lab Mosquitto, no auth)
 # Devices: cabinet, siderack, desk (Tasmota power monitors)
 # Topic: tele/smc/hq/tasmota/{device}/SENSOR
 #
@@ -32,7 +32,7 @@ input:
     client_id: tasmota_bridge
     dynamic_client_id_suffix: nanoid
     urls:
-      - tcp://192.168.68.56:1883
+      - tcp://<homelab-broker>:1883
     topics:
       - tele/smc/hq/tasmota/+/SENSOR
 

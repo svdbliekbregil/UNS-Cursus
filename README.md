@@ -45,7 +45,7 @@ Volg de instructies per sessie.
 De cursus-simulator draait 24/7:
 
 ```
-Broker: 95.217.14.139:1883 (geen login nodig)
+Broker: <cloud-broker>:1883 (geen login nodig)
 Topic:  umh/v1/metalfab/#
 ```
 

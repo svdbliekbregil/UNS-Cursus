@@ -87,4 +87,4 @@ MQTT (Message Queuing Telemetry Transport) is het standaard protocol voor IoT:
 1. Installeer [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 2. Installeer [DBeaver Community](https://dbeaver.io/download/)
 3. Optioneel: installeer [MQTT Explorer](https://mqtt-explorer.com/)
-4. Verbind met de cursus broker (`95.217.14.139:1883`) via MQTT Explorer en bekijk de data op `umh/v1/metalfab/#`
+4. Verbind met de cursus broker (`<cloud-broker>:1883`) via MQTT Explorer en bekijk de data op `umh/v1/metalfab/#`

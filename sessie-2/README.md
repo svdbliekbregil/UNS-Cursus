@@ -12,7 +12,7 @@ tijdreeksdata in TimescaleDB.
 
 ```
   [Tasmota Sensors]           [MetalFab Simulator]
-   192.168.68.56:1883          95.217.14.139:1883
+   <homelab-broker>:1883          <cloud-broker>:1883
         |                            |
         v                            v
   +------------------------------------------+
@@ -48,7 +48,7 @@ tijdreeksdata in TimescaleDB.
 ## Demo #1: Tasmota Energy Sensors (Home Lab)
 
 ### Bron
-- **Broker:** 192.168.68.56:1883 (home lab, geen auth)
+- **Broker:** <homelab-broker>:1883 (home lab, geen auth)
 - **Topic:** `tele/smc/hq/tasmota/+/SENSOR`
 - **Devices:** cabinet, siderack, desk (Tasmota power monitors met energiemeting)
 - **Payload:** JSON met `ANALOG.Temperature`, `ENERGY.Power`, `ENERGY.Voltage`, etc.
@@ -62,7 +62,7 @@ tijdreeksdata in TimescaleDB.
 
 **General tab:**
 - Name: `tasmota-energy`
-- Connection: `192.168.68.56:1883`
+- Connection: `<homelab-broker>:1883`
 - Location: `smc.hq` (wordt `{{ .location_path }}` in de tag processor)
 
 **Read tab:**
@@ -144,7 +144,7 @@ umh.v1.smc.hq.tasmota.desk._raw.voltage              = 231
 ## Demo #2: MetalFab Simulator (Cloud)
 
 ### Bron
-- **Broker:** 95.217.14.139:1883 (cloud server, geen auth)
+- **Broker:** <cloud-broker>:1883 (cloud server, geen auth)
 - **Topic:** `umh/v1/metalfab/eindhoven/+/+/_raw/#`
 - **Machines:** laser_01, press_brake_01, robot_weld_01, etc.
 - **Payload:** Bare numeric/string values (al in UMH `_raw` formaat)
@@ -159,7 +159,7 @@ umh.v1.smc.hq.tasmota.desk._raw.voltage              = 231
 
 **General tab:**
 - Name: `metalfab-simulator`
-- Connection: `95.217.14.139:1883`
+- Connection: `<cloud-broker>:1883`
 - Location: `metalfab.eindhoven`
 
 **Read tab:**
@@ -290,8 +290,8 @@ docker exec timescaledb psql -U postgres -d umh -c "SELECT * FROM asset;"
 docker exec timescaledb psql -U postgres -d umh -c "SELECT * FROM tag ORDER BY time DESC LIMIT 10;"
 
 # Test MQTT verbinding
-mosquitto_sub -h 192.168.68.56 -p 1883 -t "tele/smc/hq/tasmota/+/SENSOR" -v
-mosquitto_sub -h 95.217.14.139 -p 1883 -t "umh/v1/metalfab/eindhoven/cutting/laser_01/_raw/#" -v
+mosquitto_sub -h <homelab-broker> -p 1883 -t "tele/smc/hq/tasmota/+/SENSOR" -v
+mosquitto_sub -h <cloud-broker> -p 1883 -t "umh/v1/metalfab/eindhoven/cutting/laser_01/_raw/#" -v
 ```
 
 ---

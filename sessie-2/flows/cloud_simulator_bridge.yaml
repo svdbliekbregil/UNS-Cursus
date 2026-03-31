@@ -4,7 +4,7 @@
 # Bridges metalfab simulator data from cloud broker into local UNS.
 # Captures _raw sensor data for historian + _energy-monitor_v1 for energy flows.
 #
-# Remote broker: 95.217.14.139:1883 (no auth, HiveMQ CE)
+# Remote broker: <cloud-broker>:1883 (no auth, HiveMQ CE)
 # Simulator: Level 3 (ERP/MES), Eindhoven only
 #
 # Deploy: Management Console → Data Flows → Stand-alone → Add
@@ -19,7 +19,7 @@ input:
     client_id: cloud_simulator_bridge
     dynamic_client_id_suffix: nanoid
     urls:
-      - tcp://95.217.14.139:1883
+      - tcp://<cloud-broker>:1883
     topics:
       # _raw sensor data (all machines, all sites)
       - umh/v1/metalfab/+/+/+/_raw/#
