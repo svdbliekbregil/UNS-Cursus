@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS production_orders (
     id SERIAL PRIMARY KEY,
     timestamp TIMESTAMPTZ NOT NULL,
     asset_id INTEGER REFERENCES asset(id),
-    order_id VARCHAR(255) NOT NULL,
+    order_id VARCHAR(255) NOT NULL UNIQUE,
     customer VARCHAR(255),
     part_number VARCHAR(255),
     part_description TEXT,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS production_orders (
     planned_cycle_time_ms NUMERIC,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE (asset_id, order_id)
+    -- Overwrite op order_id: elke order bestaat maar 1x
 );
 
 CREATE INDEX IF NOT EXISTS idx_production_orders_asset ON production_orders (asset_id);

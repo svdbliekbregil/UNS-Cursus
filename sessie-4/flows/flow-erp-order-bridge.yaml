@@ -122,7 +122,7 @@ output:
         id SERIAL PRIMARY KEY,
         timestamp TIMESTAMPTZ NOT NULL,
         asset_id INTEGER REFERENCES asset(id),
-        order_id VARCHAR(255) NOT NULL,
+        order_id VARCHAR(255) NOT NULL UNIQUE,
         customer VARCHAR(255),
         part_number VARCHAR(255),
         part_description TEXT,
@@ -137,13 +137,14 @@ output:
         planned_cycle_time_ms NUMERIC,
         created_at TIMESTAMPTZ DEFAULT now(),
         updated_at TIMESTAMPTZ DEFAULT now(),
-        UNIQUE (asset_id, order_id)
+        -- UNIQUE op order_id: elke order bestaat maar 1x, wordt overschreven bij polling
       );
     query: |
       INSERT INTO production_orders (timestamp, asset_id, order_id, customer, part_number, part_description, quantity, quantity_completed, quantity_scrap, priority, status, due_date, started_at, completed_at, planned_cycle_time_ms)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      ON CONFLICT (asset_id, order_id) DO UPDATE SET
+      ON CONFLICT (order_id) DO UPDATE SET
         timestamp = EXCLUDED.timestamp,
+        asset_id = EXCLUDED.asset_id,
         customer = EXCLUDED.customer,
         part_number = EXCLUDED.part_number,
         part_description = EXCLUDED.part_description,
