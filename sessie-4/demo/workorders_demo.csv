@@ -1,0 +1,11 @@
+order_nr,asset,qty,due_date,status
+WO-001,laser-cutter-L1-01,5,2026-04-23,Nieuw
+WO-002,press-brake-P1-01,60,2026-04-23,Klaar
+WO-003,laser-cutter-L1-01,100,2026-04-23,Nieuw
+WO-004,press-brake-P1-01,50,2026-04-23,Nieuw
+WO-005,assembly-A1-01,200,2026-04-23,Bezig
+WO-006,coating-C1-01,75,2026-04-23,Bezig
+WO-007,laser-cutter-L1-02,150,2026-04-23,Klaar
+WO-008,laser-cutter-L1-01,80,2026-04-23,Nieuw
+WO-009,press-brake-P1-01,120,2026-04-23,Nieuw
+WO-010,assembly-A1-01,30,2026-04-23,Bezig

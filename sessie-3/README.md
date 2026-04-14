@@ -318,11 +318,11 @@ De cursus heeft 5 simulators beschikbaar op een cloud server. Je krijgt het IP-a
 
 | Protocol | Poort | Verbinding | Beschrijving |
 |----------|-------|------------|--------------|
-| **MQTT** | 1883 | `tcp://<CURSUS-SERVER>:1883` — geen auth | MetalFab fabriekssimulator (laser, kantbank, robots) |
-| **OPC-UA** | 4840-4853 | `opc.tcp://<CURSUS-SERVER>:4840` — anonymous | 14 gesimuleerde machines (plaatwerk, automotive, elektronica) |
-| **Modbus TCP** | 5020 | `<CURSUS-SERVER>:5020` — Slave ID 1 | Zonne-omvormer simulator |
-| **HTTP REST** | 8084 | `GET http://<CURSUS-SERVER>:8084/api/weather/current` | Weer simulator |
-| **HTTP REST** | 8085 | `GET http://<CURSUS-SERVER>:8085/api/energy/current` | Energieprijs simulator (spotmarkt) |
+| **MQTT** | 1883 | `tcp://95.217.14.139:1883` — geen auth | MetalFab fabriekssimulator (laser, kantbank, robots) |
+| **OPC-UA** | 4840-4853 | `opc.tcp://95.217.14.139:4840` — anonymous | 14 gesimuleerde machines (plaatwerk, automotive, elektronica) |
+| **Modbus TCP** | 5020 | `95.217.14.139:5020` — Slave ID 1 | Zonne-omvormer simulator |
+| **HTTP REST** | 8084 | `GET http://95.217.14.139:8084/api/weather/current` | Weer simulator |
+| **HTTP REST** | 8085 | `GET http://95.217.14.139:8085/api/energy/current` | Energieprijs simulator (spotmarkt) |
 
 ### MQTT — MetalFab Fabriek
 
@@ -330,7 +330,7 @@ Publiceer op `umh/v1/metalfab/#`. Bevat laser cutters, kantbanken en robots met 
 
 ```bash
 # Test met MQTT Explorer of mosquitto_sub
-mosquitto_sub -h <CURSUS-SERVER> -p 1883 -t "umh/v1/metalfab/#" -v
+mosquitto_sub -h 95.217.14.139 -p 1883 -t "umh/v1/metalfab/#" -v
 ```
 
 ### OPC-UA — Machine Simulator
@@ -355,12 +355,24 @@ Simuleert een zonne-omvormer met realistische dagcurve (nul 's nachts, piek rond
 | 8 | DC Spanning | V | Float32 |
 | 10 | DC Stroom | A | Float32 |
 | 12 | Paneel Temperatuur | °C | Float32 |
-| 14 | Omvormer Status | enum (0=uit, 1=opstart, 2=productie, 3=storing) | Float32 |
+| 14 | Omvormer Status | enum (0=uit, 1=opstart, 2=productie, 3=storing) | UInt32 |
 | 16 | Netfrequentie | Hz | Float32 |
 
-Configuratie in UMH: Protocol Converter → Modbus TCP, polling elke 5 seconden.
+**Configuratie in UMH:**
+
+Modbus kan op twee manieren worden geconfigureerd:
+
+1. **Protocol Converter (Bridge wizard)** — via Management Console → Data Flows → Add Bridge → Modbus. Dit is de standaard methode en werkt goed op een lokaal netwerk (bijv. PLC op de werkvloer).
+
+2. **Stand-alone DataFlow** — via Management Console → Data Flows → Stand-alone → Add. Gebruik dit als de Bridge wizard een connectietest-fout geeft (bijv. bij verbinding over internet). De Benthos `modbus` input werkt direct zonder connectietest.
+
+> **Let op:** De Bridge wizard doet een nmap-connectietest voordat hij de bridge deployt. Bij Modbus over internet kan deze test falen ("connection is degraded"), terwijl de daadwerkelijke Modbus-communicatie prima werkt. Gebruik in dat geval een stand-alone dataflow.
+
+Zie `flows/modbus-solar-bridge.yaml` voor de volledige configuratie.
 
 ### HTTP REST — Weer & Energieprijzen
+
+HTTP APIs worden geconfigureerd als **Protocol Converter** met een `generate` input (voor polling interval) en een `http` processor om de data op te halen. De tag processor splitst de JSON response in losse UNS tags.
 
 **Weer** (`/api/weather/current`):
 ```json
@@ -389,7 +401,20 @@ Configuratie in UMH: Protocol Converter → Modbus TCP, polling elke 5 seconden.
 }
 ```
 
-Configuratie in UMH: Stand-alone DataFlow met `http_client` input of `generate` + `http` processor.
+Configuratie in UMH: Protocol Converter met `generate` input (interval) + `http` processor + `tag_processor`. Zie `flows/stroomkosten.yaml` en `flows/weather-bridge.yaml` voor werkende voorbeelden.
+
+### Alle bridges in `flows/`
+
+| Bestand | Protocol | Type | Beschrijving |
+|---------|----------|------|--------------|
+| `laser-demonstratie.yaml` | OPC-UA | Protocol Converter | Laser cutter via OPC-UA bridge wizard |
+| `ontbraam.yaml` | OPC-UA | Protocol Converter | Ontbraammachine via OPC-UA bridge wizard |
+| `stroomkosten.yaml` | HTTP | Protocol Converter | Energieprijzen API polling |
+| `mqtt-metalfab.yaml` | MQTT | Stand-alone DataFlow | MetalFab fabriekssimulator |
+| `weather-bridge.yaml` | HTTP | Stand-alone DataFlow | Weer API polling |
+| `energy-price-bridge.yaml` | HTTP | Stand-alone DataFlow | Energieprijzen API (alternatief) |
+| `modbus-solar-bridge.yaml` | Modbus TCP | Stand-alone DataFlow | Zonne-omvormer registers |
+| `historian.yaml` | UNS → SQL | Stand-alone DataFlow | Alle `_raw` data → TimescaleDB |
 
 ### Lokale UMH Stack
 
@@ -403,9 +428,68 @@ Configuratie in UMH: Stand-alone DataFlow met `http_client` input of `generate` 
 
 ---
 
-## Voorbereiding
+## Deploy: Bridges aansluiten
 
-1. Stack draaiend (`docker compose up -d`)
-2. Verbind met de cursus MQTT broker via MQTT Explorer
-3. Bekijk de OPC-UA server via UMH Management Console
-4. Bedenk: welke machines in jouw fabriek hebben welk protocol?
+Alle flows staan in `flows/`. Deploy ze in de Management Console in deze volgorde.
+
+### 1. MQTT — MetalFab Fabriek
+
+Leest alle machinedata van de simulator: lasers, kantbanken, robots, AGV's. Circa 20 berichten per seconde.
+
+1. Management Console → Data Flows → Bridge → Add
+2. Protocol: **MQTT**
+3. IP: `95.217.14.139`, Port: `1883`
+4. Configureer de Read Flow met de inhoud van [`flows/flow-mqtt-metalfab.yaml`](flows/flow-mqtt-metalfab.yaml)
+5. Save & Deploy
+
+**Topics die verschijnen:** `umh.v1.metalfab.eindhoven.cutting.laser_01._raw.laser_power`, etc.
+
+### 2. OPC-UA — Laser Cutter
+
+Leest 21 OPC-UA tags van een gesimuleerde laser snijmachine: vermogen, snijsnelheid, gasdruk, plaattemperatuur, etc.
+
+1. Management Console → Data Flows → Protocol Converter → Add
+2. Plak de volledige inhoud van [`flows/flow-pc-laser-demonstratie.yaml`](flows/flow-pc-laser-demonstratie.yaml)
+3. Save & Deploy
+
+**Topics die verschijnen:** `umh.v1.smc.demo.laser-demonstratie._laser_cutter_v1.laser_power_w`, etc.
+
+### 3. Modbus — Zonne-omvormer
+
+Leest 8 Modbus registers van een gesimuleerde solar inverter elke 5 seconden: DC/AC vermogen, spanning, stroom, paneeltemperatuur.
+
+1. Management Console → Data Flows → Stand-alone → Add
+2. Plak de volledige inhoud van [`flows/flow-modbus-solar-bridge.yaml`](flows/flow-modbus-solar-bridge.yaml)
+3. Save & Deploy
+
+**Topics die verschijnen:** `umh.v1.smc.workshop.energy.solar._raw.dc_power_w`, etc.
+
+### 4. HTTP — Weerbericht
+
+Pollt elke 30 seconden een weer-API en publiceert temperatuur, luchtvochtigheid, windsnelheid, zonnestraling en meer.
+
+1. Management Console → Data Flows → Stand-alone → Add
+2. Plak de volledige inhoud van [`flows/flow-weather-bridge.yaml`](flows/flow-weather-bridge.yaml)
+3. Save & Deploy
+
+**Topics die verschijnen:** `umh.v1.smc.workshop.weather._raw.temperature_c`, etc.
+
+### Controleren
+
+Na het deployen van alle 4 bridges + de historian uit sessie 2:
+
+```sql
+-- Hoeveel assets zijn er aangemaakt?
+SELECT count(*) FROM asset;
+
+-- Laatste meetwaarden
+SELECT t.time, a.asset_name, t.tag_name, t.value
+FROM tag t JOIN asset a ON a.id = t.asset_id
+ORDER BY t.time DESC LIMIT 10;
+```
+
+## Voorbereiding sessie 4
+
+1. Alle bridges draaien, data stroomt naar TimescaleDB
+2. Open Grafana (`http://localhost:3000`) en bekijk de data source
+3. Bedenk: welke machines in jouw fabriek hebben welk protocol?
