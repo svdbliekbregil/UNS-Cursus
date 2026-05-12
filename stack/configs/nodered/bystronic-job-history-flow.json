@@ -1,0 +1,394 @@
+[
+    {
+        "id": "bystronic_tab",
+        "type": "tab",
+        "label": "Bystronic Job History",
+        "disabled": false,
+        "info": "OPC UA method calls naar Bystronic History object via node-opcua library"
+    },
+    {
+        "id": "bystronic_opcua_endpoint",
+        "type": "OpcUa-Endpoint",
+        "endpoint": "opc.tcp://192.168.0.21:56000",
+        "secpol": "None",
+        "secmode": "None",
+        "login": false,
+        "credentials": {}
+    },
+    {
+        "id": "comment_browse",
+        "type": "comment",
+        "z": "bystronic_tab",
+        "name": "=== 1. BROWSE ===",
+        "x": 150,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "inject_browse_history",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse History",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=History" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=History",
+        "x": 150,
+        "y": 80,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_work",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse Work",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=Work" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=Work",
+        "x": 150,
+        "y": 120,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_machinestates",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse MachineStates",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=MachineStates" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=MachineStates",
+        "x": 170,
+        "y": 160,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_machine",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse Machine",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=Machine" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=Machine",
+        "x": 150,
+        "y": 200,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_laser",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse Laser",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=Laser" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=Laser",
+        "x": 150,
+        "y": 240,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_sysmsg",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse SystemMessenger",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=SystemMessenger" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=SystemMessenger",
+        "x": 180,
+        "y": 280,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_condmsg",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse ConditionMessenger",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=ConditionMessenger" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=ConditionMessenger",
+        "x": 190,
+        "y": 320,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_maintmsg",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse MaintenanceMessenger",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=MaintenanceMessenger" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=MaintenanceMessenger",
+        "x": 200,
+        "y": 360,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "inject_browse_iot",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Browse IoT",
+        "props": [
+            { "p": "topic", "vt": "str", "v": "ns=2;s=IoT" },
+            { "p": "actiontype", "v": "browse", "vt": "str" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "ns=2;s=IoT",
+        "x": 150,
+        "y": 400,
+        "wires": [["opcua_browse"]]
+    },
+    {
+        "id": "opcua_browse",
+        "type": "OpcUa-Client",
+        "z": "bystronic_tab",
+        "endpoint": "bystronic_opcua_endpoint",
+        "action": "browse",
+        "deadbandtype": "a",
+        "deadbandvalue": 1,
+        "time": 10,
+        "timeUnit": "s",
+        "certificate": "n",
+        "localfile": "",
+        "localkeyfile": "",
+        "securitymode": "None",
+        "securitypolicy": "None",
+        "useTransport": false,
+        "maxChunkCount": 1,
+        "maxMessageSize": 8192,
+        "receiveBufferSize": 8192,
+        "sendBufferSize": 8192,
+        "name": "Browse Bystronic",
+        "x": 400,
+        "y": 100,
+        "wires": [["debug_browse"]]
+    },
+    {
+        "id": "debug_browse",
+        "type": "debug",
+        "z": "bystronic_tab",
+        "name": "Browse Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 610,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "comment_getrunhistory",
+        "type": "comment",
+        "z": "bystronic_tab",
+        "name": "=== 2. GetRunHistory (node-opcua direct) ===",
+        "x": 250,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "inject_getrunhistory",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Trigger GetRunHistory",
+        "props": [{ "p": "payload", "v": "", "vt": "date" }],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 170,
+        "y": 260,
+        "wires": [["func_getrunhistory"]]
+    },
+    {
+        "id": "func_getrunhistory",
+        "type": "function",
+        "z": "bystronic_tab",
+        "name": "Call GetRunHistory",
+        "func": "const endpointUrl = \"opc.tcp://192.168.0.21:56000\";\nconst DAYS_BACK = 30;\nconst PAGE = 0;\nconst PAGE_SIZE = 100;\n\nconst now = new Date();\nconst from = new Date(now.getTime() - (DAYS_BACK * 24 * 60 * 60 * 1000));\n\nnode.status({fill:\"blue\", shape:\"dot\", text:\"connecting...\"});\n\nconst client = opcua.OPCUAClient.create({\n    endpointMustExist: false,\n    securityMode: opcua.MessageSecurityMode.None,\n    securityPolicy: opcua.SecurityPolicy.None\n});\n\nasync function run() {\n    try {\n        await client.connect(endpointUrl);\n        const session = await client.createSession();\n        node.status({fill:\"blue\", shape:\"dot\", text:\"calling method...\"});\n        \n        const methodToCall = {\n            objectId: opcua.resolveNodeId(\"ns=2;s=History\"),\n            methodId: opcua.resolveNodeId(\"ns=2;s=History.GetRunHistory\"),\n            inputArguments: [\n                { dataType: opcua.DataType.DateTime, value: from },\n                { dataType: opcua.DataType.DateTime, value: now },\n                { dataType: opcua.DataType.Int32, value: PAGE },\n                { dataType: opcua.DataType.Int32, value: PAGE_SIZE }\n            ]\n        };\n        \n        const result = await session.call(methodToCall);\n        \n        let output = {\n            statusCode: result.statusCode.toString(),\n            outputArguments: []\n        };\n        \n        if (result.outputArguments) {\n            for (let i = 0; i < result.outputArguments.length; i++) {\n                let arg = result.outputArguments[i];\n                let val = arg.value;\n                // Try to parse JSON strings\n                if (typeof val === 'string') {\n                    try { val = JSON.parse(val); } catch(e) {}\n                }\n                output.outputArguments.push({\n                    dataType: arg.dataType,\n                    value: val\n                });\n            }\n        }\n        \n        msg.payload = output;\n        node.status({fill:\"green\", shape:\"dot\", text:\"done\"});\n        \n        await session.close();\n        await client.disconnect();\n        \n        node.send(msg);\n    } catch(err) {\n        node.error(\"OPC UA error: \" + err.message, msg);\n        node.status({fill:\"red\", shape:\"ring\", text: err.message.substring(0,40)});\n        try { await client.disconnect(); } catch(e) {}\n    }\n}\n\nrun();\nreturn null; // async, we use node.send()",
+        "outputs": 1,
+        "timeout": "30",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "opcua",
+                "module": "node-opcua"
+            }
+        ],
+        "x": 430,
+        "y": 260,
+        "wires": [["debug_runs"]]
+    },
+    {
+        "id": "debug_runs",
+        "type": "debug",
+        "z": "bystronic_tab",
+        "name": "RunHistory Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 670,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "comment_getjobinfo",
+        "type": "comment",
+        "z": "bystronic_tab",
+        "name": "=== 3. GetJobInfo (pas GUID aan in code) ===",
+        "x": 250,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "inject_getjobinfo",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Trigger GetJobInfo",
+        "props": [{ "p": "payload", "v": "", "vt": "date" }],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 160,
+        "y": 420,
+        "wires": [["func_getjobinfo"]]
+    },
+    {
+        "id": "func_getjobinfo",
+        "type": "function",
+        "z": "bystronic_tab",
+        "name": "Call GetJobInfo (PAS GUID AAN!)",
+        "func": "// ==================================================\n// PAS DEZE GUID AAN!\n// ==================================================\nconst JOB_GUID = \"00000000-0000-0000-0000-000000000000\";\n\nconst endpointUrl = \"opc.tcp://192.168.0.21:56000\";\nnode.status({fill:\"blue\", shape:\"dot\", text:\"connecting...\"});\n\nconst client = opcua.OPCUAClient.create({\n    endpointMustExist: false,\n    securityMode: opcua.MessageSecurityMode.None,\n    securityPolicy: opcua.SecurityPolicy.None\n});\n\nasync function run() {\n    try {\n        await client.connect(endpointUrl);\n        const session = await client.createSession();\n        node.status({fill:\"blue\", shape:\"dot\", text:\"calling...\"});\n        \n        const result = await session.call({\n            objectId: opcua.resolveNodeId(\"ns=2;s=History\"),\n            methodId: opcua.resolveNodeId(\"ns=2;s=History.GetJobInfo\"),\n            inputArguments: [\n                { dataType: opcua.DataType.Guid, value: JOB_GUID }\n            ]\n        });\n        \n        let output = { statusCode: result.statusCode.toString() };\n        if (result.outputArguments) {\n            for (let arg of result.outputArguments) {\n                let val = arg.value;\n                if (typeof val === 'string') {\n                    try { val = JSON.parse(val); } catch(e) {}\n                }\n                output.data = val;\n            }\n        }\n        \n        msg.payload = output;\n        node.status({fill:\"green\", shape:\"dot\", text:\"done\"});\n        await session.close();\n        await client.disconnect();\n        node.send(msg);\n    } catch(err) {\n        node.error(\"OPC UA error: \" + err.message, msg);\n        node.status({fill:\"red\", shape:\"ring\", text: err.message.substring(0,40)});\n        try { await client.disconnect(); } catch(e) {}\n    }\n}\n\nrun();\nreturn null;",
+        "outputs": 1,
+        "timeout": "30",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "opcua",
+                "module": "node-opcua"
+            }
+        ],
+        "x": 440,
+        "y": 420,
+        "wires": [["debug_job"]]
+    },
+    {
+        "id": "debug_job",
+        "type": "debug",
+        "z": "bystronic_tab",
+        "name": "JobInfo Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 680,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "comment_getplaninfos",
+        "type": "comment",
+        "z": "bystronic_tab",
+        "name": "=== 4. GetPlanInfos (pas GUID aan in code) ===",
+        "x": 260,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "inject_getplaninfos",
+        "type": "inject",
+        "z": "bystronic_tab",
+        "name": "Trigger GetPlanInfos",
+        "props": [{ "p": "payload", "v": "", "vt": "date" }],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 170,
+        "y": 580,
+        "wires": [["func_getplaninfos"]]
+    },
+    {
+        "id": "func_getplaninfos",
+        "type": "function",
+        "z": "bystronic_tab",
+        "name": "Call GetPlanInfos (PAS GUID AAN!)",
+        "func": "// ==================================================\n// PAS DEZE GUID AAN!\n// ==================================================\nconst JOB_GUID = \"00000000-0000-0000-0000-000000000000\";\n\nconst endpointUrl = \"opc.tcp://192.168.0.21:56000\";\nnode.status({fill:\"blue\", shape:\"dot\", text:\"connecting...\"});\n\nconst client = opcua.OPCUAClient.create({\n    endpointMustExist: false,\n    securityMode: opcua.MessageSecurityMode.None,\n    securityPolicy: opcua.SecurityPolicy.None\n});\n\nasync function run() {\n    try {\n        await client.connect(endpointUrl);\n        const session = await client.createSession();\n        node.status({fill:\"blue\", shape:\"dot\", text:\"calling...\"});\n        \n        const result = await session.call({\n            objectId: opcua.resolveNodeId(\"ns=2;s=History\"),\n            methodId: opcua.resolveNodeId(\"ns=2;s=History.GetPlanInfos\"),\n            inputArguments: [\n                { dataType: opcua.DataType.Guid, value: JOB_GUID }\n            ]\n        });\n        \n        let output = { statusCode: result.statusCode.toString() };\n        if (result.outputArguments) {\n            for (let arg of result.outputArguments) {\n                let val = arg.value;\n                if (typeof val === 'string') {\n                    try { val = JSON.parse(val); } catch(e) {}\n                }\n                output.data = val;\n            }\n        }\n        \n        msg.payload = output;\n        node.status({fill:\"green\", shape:\"dot\", text:\"done\"});\n        await session.close();\n        await client.disconnect();\n        node.send(msg);\n    } catch(err) {\n        node.error(\"OPC UA error: \" + err.message, msg);\n        node.status({fill:\"red\", shape:\"ring\", text: err.message.substring(0,40)});\n        try { await client.disconnect(); } catch(e) {}\n    }\n}\n\nrun();\nreturn null;",
+        "outputs": 1,
+        "timeout": "30",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "opcua",
+                "module": "node-opcua"
+            }
+        ],
+        "x": 450,
+        "y": 580,
+        "wires": [["debug_plans"]]
+    },
+    {
+        "id": "debug_plans",
+        "type": "debug",
+        "z": "bystronic_tab",
+        "name": "PlanInfos Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 690,
+        "y": 580,
+        "wires": []
+    }
+]

@@ -1,0 +1,89 @@
+[
+    {
+        "id": "bystronic_backfill_tab",
+        "type": "tab",
+        "label": "Bystronic Backfill",
+        "disabled": false,
+        "info": "Backfill + incremental poll van Bystronic jobs/plans/runs vanuit OPC UA History object naar PostgreSQL. 3 modes via inject: TEST (msg.test=true), Start Backfill (full range FROM_DATE..now), Incremental Poll (msg.incremental=true, leest FROM_DATE uit bystronic_sync_state)."
+    },
+    {
+        "id": "inject_backfill",
+        "type": "inject",
+        "z": "bystronic_backfill_tab",
+        "name": "Start Backfill",
+        "props": [{ "p": "payload", "v": "", "vt": "date" }],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 140,
+        "y": 140,
+        "wires": [["func_backfill"]]
+    },
+    {
+        "id": "inject_test",
+        "type": "inject",
+        "z": "bystronic_backfill_tab",
+        "name": "TEST (1 dag, 10 runs)",
+        "props": [
+            { "p": "payload", "v": "", "vt": "date" },
+            { "p": "test", "v": "true", "vt": "bool" }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 160,
+        "y": 80,
+        "wires": [["func_backfill"]]
+    },
+    {
+        "id": "inject_incremental",
+        "type": "inject",
+        "z": "bystronic_backfill_tab",
+        "name": "Incremental Poll (15 min)",
+        "props": [
+            { "p": "payload", "v": "", "vt": "date" },
+            { "p": "incremental", "v": "true", "vt": "bool" }
+        ],
+        "repeat": "900",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "30",
+        "x": 170,
+        "y": 200,
+        "wires": [["func_backfill"]]
+    },
+    {
+        "id": "func_backfill",
+        "type": "function",
+        "z": "bystronic_backfill_tab",
+        "name": "Backfill Runs+Jobs+Plans",
+        "func": "// ============================================\n// Modes:\n//  - msg.test=true        -> TEST (klein window)\n//  - msg.incremental=true  -> incremental poll vanaf last_recorded_at in bystronic_sync_state\n//  - geen flag             -> full backfill FROM_DATE..now\n// ============================================\nconst TEST_MODE = msg.test === true;\nconst INCREMENTAL = msg.incremental === true;\n\nconst endpointUrl = \"opc.tcp://192.168.0.21:56000\";\nconst ASSET_ID  = 14; // bregil.gilze.sheet-preparation.sheet-laser.bystronic-bycut-12kw\nconst SYNC_KEY  = \"bystronic_runs_asset_14\";\nconst OVERLAP_MS = 5 * 60 * 1000; // 5 min safety overlap op incremental\n\nlet FROM_DATE = new Date(\"2026-04-01T00:00:00Z\");\nlet TO_DATE   = new Date();\nlet PAGE_SIZE = 100;\nlet MAX_PAGES = 9999;\n\nif (TEST_MODE) {\n    FROM_DATE = new Date(\"2026-03-18T00:00:00Z\");\n    TO_DATE   = new Date(\"2026-03-19T00:00:00Z\");\n    PAGE_SIZE = 10;\n    MAX_PAGES = 1;\n}\n\nconst PG_CONFIG = {\n    host: 'timescaledb',\n    port: 5432,\n    database: 'umh',\n    user: 'kafkatopostgresqlv2',\n    password: 'umhcore'\n};\n\n// ============================================\n// Enum mappings — BySoft Cell Control Cut OPC UA spec 2.0.0 §2.5/2.6\nconst CUT_STATE_NAMES = {\n    '0': 'None', '1': 'Started', '2': 'WaitMaterial',\n    '3': 'Cutting', '4': 'Completed', '5': 'Aborted'\n};\nconst PLAN_STATE_NAMES = {\n    '0': 'Inactive', '1': 'Started', '2': 'Completed',\n    '3': 'PartiallyCompleted', '4': 'Failed'\n};\nfunction cutStateName(v)  { return v == null ? null : (CUT_STATE_NAMES[String(v)]  || null); }\nfunction planStateName(v) { return v == null ? null : (PLAN_STATE_NAMES[String(v)] || null); }\n\nconst { Client } = pg;\nconst pgClient = new Client(PG_CONFIG);\nconst client = opcua.OPCUAClient.create({\n    endpointMustExist: false,\n    securityMode: opcua.MessageSecurityMode.None,\n    securityPolicy: opcua.SecurityPolicy.None\n});\n\nfunction parseJson(s) {\n    if (typeof s !== 'string') return s;\n    try { return JSON.parse(s); } catch(e) { return null; }\n}\n\n// .NET DateTime.MinValue (\"0001-01-01T00:00:00Z\") betekent 'niet gezet' -> NULL\nfunction cleanDate(v) {\n    if (v == null) return null;\n    if (typeof v === 'string' && v.startsWith('0001-01-01')) return null;\n    return v;\n}\n\nasync function getSyncState() {\n    const r = await pgClient.query(\n        'SELECT last_recorded_at FROM bystronic_sync_state WHERE key=$1',\n        [SYNC_KEY]\n    );\n    return r.rows.length ? r.rows[0].last_recorded_at : null;\n}\n\nasync function updateSyncState(ts) {\n    await pgClient.query(\n        `INSERT INTO bystronic_sync_state(key, last_recorded_at, updated_at)\n         VALUES($1, $2, NOW())\n         ON CONFLICT (key) DO UPDATE SET last_recorded_at=EXCLUDED.last_recorded_at, updated_at=NOW()`,\n        [SYNC_KEY, ts]\n    );\n}\n\nasync function upsertJob(jobGuid, info) {\n    await pgClient.query(\n        `INSERT INTO bystronic_job(job_guid, asset_id, name, description, nc_program_file, user_info_1, user_info_2, user_info_3, raw_json)\n         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)\n         ON CONFLICT (job_guid) DO UPDATE SET\n            name=EXCLUDED.name,\n            description=EXCLUDED.description,\n            nc_program_file=EXCLUDED.nc_program_file,\n            user_info_1=EXCLUDED.user_info_1,\n            user_info_2=EXCLUDED.user_info_2,\n            user_info_3=EXCLUDED.user_info_3,\n            raw_json=EXCLUDED.raw_json,\n            updated_at=NOW()`,\n        [\n            jobGuid,\n            ASSET_ID,\n            info?.Name ?? null,\n            info?.Description ?? null,\n            info?.NcProgramFile ?? null,\n            info?.UserInfo1 ?? null,\n            info?.UserInfo2 ?? null,\n            info?.UserInfo3 ?? null,\n            info ? JSON.stringify(info) : null\n        ]\n    );\n}\n\nasync function upsertPlan(plan, jobGuid) {\n    const planStateRaw = plan.PlanState != null ? String(plan.PlanState) : null;\n    await pgClient.query(\n        `INSERT INTO bystronic_plan(plan_guid, job_guid, name, material_name, material_thickness, total_runs, total_parts, plan_state, plan_state_name, estimated_cut_time, size_x, size_y, material_size_x, material_size_y, raw_json)\n         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)\n         ON CONFLICT (plan_guid) DO UPDATE SET\n            name=EXCLUDED.name,\n            material_name=EXCLUDED.material_name,\n            material_thickness=EXCLUDED.material_thickness,\n            total_runs=EXCLUDED.total_runs,\n            total_parts=EXCLUDED.total_parts,\n            plan_state=EXCLUDED.plan_state,\n            plan_state_name=EXCLUDED.plan_state_name,\n            estimated_cut_time=EXCLUDED.estimated_cut_time,\n            size_x=EXCLUDED.size_x,\n            size_y=EXCLUDED.size_y,\n            material_size_x=EXCLUDED.material_size_x,\n            material_size_y=EXCLUDED.material_size_y,\n            raw_json=EXCLUDED.raw_json,\n            updated_at=NOW()`,\n        [\n            plan.PlanGuid,\n            jobGuid,\n            plan.Name ?? null,\n            plan.MaterialName ?? null,\n            plan.MaterialThickness ?? null,\n            plan.TotalRuns ?? null,\n            plan.TotalParts ?? null,\n            planStateRaw,\n            planStateName(planStateRaw),\n            plan.EstimatedCutTime ?? null,\n            plan.SizeX ?? null,\n            plan.SizeY ?? null,\n            plan.MaterialSizeX ?? null,\n            plan.MaterialSizeY ?? null,\n            JSON.stringify(plan)\n        ]\n    );\n}\n\nasync function upsertRun(r) {\n    const cutStateRaw = r.CutState != null ? String(r.CutState) : null;\n    await pgClient.query(\n        `INSERT INTO bystronic_run(run_guid, plan_guid, job_guid, run_number, cut_state, cut_state_name, cut_start_time, cut_end_time, actual_cut_time, actual_stop_time, actual_wait_time, sorting_enabled, recorded_at, raw_json)\n         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)\n         ON CONFLICT (run_guid) DO UPDATE SET\n            plan_guid=EXCLUDED.plan_guid,\n            run_number=EXCLUDED.run_number,\n            cut_state=EXCLUDED.cut_state,\n            cut_state_name=EXCLUDED.cut_state_name,\n            cut_start_time=EXCLUDED.cut_start_time,\n            cut_end_time=EXCLUDED.cut_end_time,\n            actual_cut_time=EXCLUDED.actual_cut_time,\n            actual_stop_time=EXCLUDED.actual_stop_time,\n            actual_wait_time=EXCLUDED.actual_wait_time,\n            sorting_enabled=EXCLUDED.sorting_enabled,\n            recorded_at=EXCLUDED.recorded_at,\n            raw_json=EXCLUDED.raw_json,\n            updated_at=NOW()`,\n        [\n            r.RunGuid,\n            r.PlanGuid ?? null,\n            r.JobGuid,\n            r.RunNumber ?? null,\n            cutStateRaw,\n            cutStateName(cutStateRaw),\n            cleanDate(r.CutStartTime),\n            cleanDate(r.CutEndTime),\n            r.ActualCutTime ?? null,\n            r.ActualStopTime ?? null,\n            r.ActualWaitTime ?? null,\n            r.SortingEnabled ?? null,\n            cleanDate(r.TimeStamp),\n            JSON.stringify(r)\n        ]\n    );\n}\n\nasync function ensureStubPlan(planGuid, jobGuid) {\n    await pgClient.query(\n        `INSERT INTO bystronic_plan(plan_guid, job_guid, raw_json)\n         VALUES($1, $2, $3)\n         ON CONFLICT (plan_guid) DO NOTHING`,\n        [planGuid, jobGuid, JSON.stringify({ stub: true, reason: \"plan_guid not returned by GetPlanInfos\" })]\n    );\n}\n\nasync function run() {\n    const stats = { mode: TEST_MODE ? 'test' : (INCREMENTAL ? 'incremental' : 'backfill'), pages: 0, runs: 0, jobs: 0, plans: 0, errors: 0 };\n    node.status({ fill: 'blue', shape: 'dot', text: `${stats.mode}: connecting...` });\n\n    try {\n        await pgClient.connect();\n\n        // Incremental: haal last_recorded_at op en gebruik als FROM_DATE\n        if (INCREMENTAL && !TEST_MODE) {\n            const last = await getSyncState();\n            if (last) {\n                FROM_DATE = new Date(new Date(last).getTime() - OVERLAP_MS);\n            }\n            stats.fromDate = FROM_DATE.toISOString();\n            stats.toDate = TO_DATE.toISOString();\n        }\n\n        await client.connect(endpointUrl);\n        const session = await client.createSession();\n\n        const seenJobs = new Set();\n        const seenPlans = new Set();\n        let page = 0;\n        let maxRecordedAt = null;\n\n        while (true) {\n            node.status({ fill: 'blue', shape: 'dot', text: `${stats.mode} p${page} | ${stats.runs} runs` });\n\n            const res = await session.call({\n                objectId: opcua.resolveNodeId(\"ns=2;s=History\"),\n                methodId: opcua.resolveNodeId(\"ns=2;s=History.GetRunHistory\"),\n                inputArguments: [\n                    { dataType: opcua.DataType.DateTime, value: FROM_DATE },\n                    { dataType: opcua.DataType.DateTime, value: TO_DATE },\n                    { dataType: opcua.DataType.Int32, value: page },\n                    { dataType: opcua.DataType.Int32, value: PAGE_SIZE }\n                ]\n            });\n\n            if (!res.outputArguments || res.outputArguments.length < 2) break;\n            const runs = parseJson(res.outputArguments[1].value) || [];\n            if (runs.length === 0) break;\n\n            const jobGuidsInPage = [...new Set(runs.map(r => r.JobGuid).filter(Boolean))];\n            for (const jg of jobGuidsInPage) {\n                if (seenJobs.has(jg)) continue;\n                seenJobs.add(jg);\n\n                let jobInfo = null;\n                try {\n                    const ji = await session.call({\n                        objectId: opcua.resolveNodeId(\"ns=2;s=History\"),\n                        methodId: opcua.resolveNodeId(\"ns=2;s=History.GetJobInfo\"),\n                        inputArguments: [{ dataType: opcua.DataType.Guid, value: jg }]\n                    });\n                    if (ji.outputArguments && ji.outputArguments[0]) {\n                        const parsed = parseJson(ji.outputArguments[0].value);\n                        jobInfo = Array.isArray(parsed) ? parsed[0] : parsed;\n                    }\n                } catch(e) {\n                    node.warn(`GetJobInfo failed for ${jg}: ${e.message}`);\n                    stats.errors++;\n                }\n\n                await upsertJob(jg, jobInfo);\n                stats.jobs++;\n\n                try {\n                    const pi = await session.call({\n                        objectId: opcua.resolveNodeId(\"ns=2;s=History\"),\n                        methodId: opcua.resolveNodeId(\"ns=2;s=History.GetPlanInfos\"),\n                        inputArguments: [{ dataType: opcua.DataType.Guid, value: jg }]\n                    });\n                    if (pi.outputArguments && pi.outputArguments[0]) {\n                        const parsed = parseJson(pi.outputArguments[0].value);\n                        const plans = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);\n                        for (const p of plans) {\n                            if (!p || !p.PlanGuid) continue;\n                            await upsertPlan(p, jg);\n                            seenPlans.add(p.PlanGuid);\n                            stats.plans++;\n                        }\n                    }\n                } catch(e) {\n                    node.warn(`GetPlanInfos failed for ${jg}: ${e.message}`);\n                    stats.errors++;\n                }\n            }\n\n            for (const r of runs) {\n                if (!r || !r.RunGuid || !r.JobGuid) continue;\n                try {\n                    if (r.PlanGuid && !seenPlans.has(r.PlanGuid)) {\n                        await ensureStubPlan(r.PlanGuid, r.JobGuid);\n                        seenPlans.add(r.PlanGuid);\n                        stats.stubPlans = (stats.stubPlans || 0) + 1;\n                    }\n                    await upsertRun(r);\n                    stats.runs++;\n\n                    const rec = cleanDate(r.TimeStamp);\n                    if (rec) {\n                        const d = new Date(rec);\n                        if (!maxRecordedAt || d > maxRecordedAt) maxRecordedAt = d;\n                    }\n                } catch(e) {\n                    node.warn(`upsertRun failed for ${r.RunGuid}: ${e.message}`);\n                    stats.errors++;\n                }\n            }\n\n            stats.pages++;\n            if (runs.length < PAGE_SIZE) break;\n            if (stats.pages >= MAX_PAGES) break;\n            page++;\n        }\n\n        await session.close();\n        await client.disconnect();\n\n        // Update sync_state bij incremental of full backfill (niet bij test)\n        if (!TEST_MODE && maxRecordedAt) {\n            await updateSyncState(maxRecordedAt);\n            stats.lastRecordedAt = maxRecordedAt.toISOString();\n        }\n\n        await pgClient.end();\n\n        msg.payload = stats;\n        node.status({ fill: 'green', shape: 'dot', text: `${stats.mode}: ${stats.runs}r ${stats.jobs}j` });\n        node.send(msg);\n    } catch(err) {\n        node.error(\"Backfill error: \" + err.message, msg);\n        node.status({ fill: 'red', shape: 'ring', text: err.message.substring(0, 40) });\n        try { await pgClient.end(); } catch(e) {}\n        try { await client.disconnect(); } catch(e) {}\n    }\n}\n\nrun();\nreturn null;",
+        "outputs": 1,
+        "timeout": "600",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            { "var": "opcua", "module": "node-opcua" },
+            { "var": "pg", "module": "pg" }
+        ],
+        "x": 400,
+        "y": 140,
+        "wires": [["debug_backfill"]]
+    },
+    {
+        "id": "debug_backfill",
+        "type": "debug",
+        "z": "bystronic_backfill_tab",
+        "name": "Backfill Result",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 650,
+        "y": 140,
+        "wires": []
+    }
+]
